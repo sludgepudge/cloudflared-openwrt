@@ -85,21 +85,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Get Latest Cloudflared Version
-        id: get_version
-        run: |
-          LATEST_VERSION=$(curl -sL https://api.github.com/repos/cloudflare/cloudflared/releases/latest | jq -r .tag_name)
-          if [ -z "$LATEST_VERSION" ]; then
-            echo "Failed to fetch latest version"
-            exit 1
-          fi
-          echo "CLOUDFLARED_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
-
       - name: Fetch and Patch Cloudflared Makefile
         run: |
           mkdir -p cloudflared
           curl -sL "https://raw.githubusercontent.com/openwrt/packages/master/net/cloudflared/Makefile" -o cloudflared/Makefile
-          sed -i "s/PKG_VERSION:=.*/PKG_VERSION:=${CLOUDFLARED_VERSION}/" cloudflared/Makefile
+          sed -i "s/PKG_VERSION:=.*/PKG_VERSION:=${{ github.ref_name }}/" cloudflared/Makefile
           sed -i "s/PKG_HASH:=.*/PKG_HASH:=skip/" cloudflared/Makefile
           sed -i 's#\.\./\.\.#$(TOPDIR)/feeds/packages#' cloudflared/Makefile
 
