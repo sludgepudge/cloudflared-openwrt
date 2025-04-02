@@ -219,6 +219,7 @@ jobs:
           if ! compgen -G "*.{apk,ipk}" >/dev/null; then
             echo "No packages found to release"
             exit 1
+          fi
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
