@@ -15,8 +15,7 @@ jobs:
     strategy:
       matrix:
         ref:
-          - main # apk
-          - openwrt-23.05 # ipk
+          - openwrt-23.05 # ipk only
     steps:
       - name: Checkout OpenWrt
         uses: actions/checkout@v4
@@ -179,29 +178,12 @@ jobs:
           EOF
           chmod +x cloudflared/files/cloudflared.init
 
-      - name: Change ownership of keys
-        run: sudo chown -R $(whoami) /builder/keys
-  
-      - name: Debug permissions
-        run: ls -l /builder/keys
-
       - name: Build Package
         uses: openwrt/gh-action-sdk@main
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.ref }}
           V: s
           IGNORE_ERRORS: n m y
-
-      - name: Append Architecture to APK Filename
-        if: matrix.ref == 'main'
-        working-directory: bin/packages/${{ matrix.arch }}
-        run: |
-          file=$(find . -name 'cloudflared*.apk')
-          if [ -n "$file" ] && [[ "$file" != *${{ matrix.arch }}* ]]; then
-            filename="${file%.*}"
-            extension="${file##*.}"
-            mv "$file" "$filename-${{ matrix.arch }}.$extension"
-          fi
 
       - name: Upload Output Folder
         uses: actions/upload-artifact@v4
@@ -226,7 +208,7 @@ jobs:
         run: |
           echo "## SHA256 Sums" > SUMS.md
           echo '```' >> SUMS.md
-          for f in *.{apk,ipk}; do
+          for f in *.ipk; do
             printf "%-55s %s\n" "$f" "$(sha256sum "$f" | cut -d' ' -f1)" >> SUMS.md
           done
           echo '```' >> SUMS.md
@@ -236,5 +218,4 @@ jobs:
         with:
           body_path: SUMS.md
           files: |
-            *.apk
             *.ipk
