@@ -179,6 +179,12 @@ jobs:
           EOF
           chmod +x cloudflared/files/cloudflared.init
 
+      - name: Change ownership of keys
+        run: sudo chown -R $(whoami) /builder/keys
+  
+      - name: Debug permissions
+        run: ls -l /builder/keys
+
       - name: Build Package
         uses: openwrt/gh-action-sdk@main
         env:
