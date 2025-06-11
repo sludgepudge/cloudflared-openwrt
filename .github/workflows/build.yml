@@ -204,6 +204,12 @@ jobs:
         with:
           merge-multiple: true
 
+      - name: Extract artifacts
+        run: |
+          for z in *.zip; do
+            unzip "$z"
+          done
+
       - name: Generate SHA256 Sums
         run: |
           echo "## SHA256 Sums" > SUMS.md
