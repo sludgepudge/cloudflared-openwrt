@@ -23,6 +23,29 @@ jobs:
           repository: openwrt/openwrt
           ref: ${{ matrix.ref }}
 
+      - name: Install prerequisites
+        run: sudo apt-get update && sudo apt-get install -y patch curl build-essential
+
+      - name: Build and install Go 1.24 with Cloudflare TLS patches
+        run: |
+          git clone https://go.googlesource.com/go go-src
+          cd go-src
+          git checkout go1.24.0
+
+          # Apply Cloudflare TLS patches by replacing the Go stdlib files
+          curl -sL https://raw.githubusercontent.com/cloudflare/go/go1.22.2cf/src/crypto/tls/common.go > src/crypto/tls/common.go
+          curl -sL https://raw.githubusercontent.com/cloudflare/go/go1.22.2cf/src/crypto/tls/conn.go > src/crypto/tls/conn.go
+          curl -sL https://raw.githubusercontent.com/cloudflare/go/go1.22.2cf/src/crypto/tls/handshake_server.go > src/crypto/tls/handshake_server.go
+          curl -sL https://raw.githubusercontent.com/cloudflare/go/go1.22.2cf/src/crypto/tls/key_agreement.go > src/crypto/tls/key_agreement.go
+
+          cd src
+          ./make.bash
+
+          echo "${{ github.workspace }}/go-src/bin" >> $GITHUB_PATH
+
+      - name: Confirm Go version
+        run: go version
+
       - name: Set targets
         id: find_targets
         run: |
@@ -203,12 +226,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
-
-      - name: Extract artifacts
-        run: |
-          for z in *.zip; do
-            unzip "$z"
-          done
 
       - name: Generate SHA256 Sums
         run: |
