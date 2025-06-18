@@ -87,25 +87,31 @@ jobs:
       - name: Install prerequisites
         run: sudo apt-get update && sudo apt-get install -y patch curl build-essential
 
-      - name: Build and install Go 1.24 with Cloudflare TLS patches
+      - name: Build Go 1.24 + Cloudflare TLS patches
         run: |
-          git clone https://go.googlesource.com/go go-src
-          cd go-src
+          # Clone upstream Go 1.24
+          git clone https://go.googlesource.com/go go-upstream
+          cd go-upstream
           git checkout go1.24.0
 
-          # Apply Cloudflare patches (from go1.22.2cf)
-          curl -sL https://raw.githubusercontent.com/cloudflare/go/go1.22.2cf/src/crypto/tls/common.go > src/crypto/tls/common.go
-          curl -sL https://raw.githubusercontent.com/cloudflare/go/go1.22.2cf/src/crypto/tls/conn.go > src/crypto/tls/conn.go
-          curl -sL https://raw.githubusercontent.com/cloudflare/go/go1.22.2cf/src/crypto/tls/handshake_server.go > src/crypto/tls/handshake_server.go
-          curl -sL https://raw.githubusercontent.com/cloudflare/go/go1.22.2cf/src/crypto/tls/key_agreement.go > src/crypto/tls/key_agreement.go
+          cd ..
+          git clone https://github.com/cloudflare/go go-cf
+          cd go-cf
+          git checkout cf
+
+          git diff --binary $(git merge-base cf master)..cf -- src/crypto/tls src/net/http > ../cf-tls.patch
+
+          cd ../go-upstream
+          git checkout -b go1.24-cf
+          patch -p1 < ../cf-tls.patch
 
           cd src
           ./make.bash
 
-          echo "${{ github.workspace }}/go-src/bin" >> $GITHUB_PATH
+          echo "${{ github.workspace }}/go-upstream/bin" >> $GITHUB_PATH
 
       - name: Confirm Go version
-        run: go version
+        run: go version      # should now show go1.24 + Cloudflare TLS support
 
       - name: Checkout Repository
         uses: actions/checkout@v4
