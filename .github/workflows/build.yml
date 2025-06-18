@@ -99,7 +99,7 @@ jobs:
           cd go-cf
           git checkout cf
 
-          git diff --binary $(git merge-base cf master)..cf -- src/crypto/tls src/net/http > ../cf-tls.patch
+          git diff --binary $(git merge-base cf go1.22.12)..cf -- src/crypto/tls src/net/http > ../cf-tls.patch
 
           cd ../go-upstream
           git checkout -b go1.24-cf
