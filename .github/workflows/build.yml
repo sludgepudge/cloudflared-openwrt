@@ -87,61 +87,16 @@ jobs:
       - name: Install prerequisites
         run: sudo apt-get update && sudo apt-get install -y patch curl build-essential
 
-      - name: Build Minimal Go 1.24 with Cloudflare TLS
-        run: |
-          git clone https://go.googlesource.com/go "${{ github.workspace }}/go-custom"
-          cd "${{ github.workspace }}/go-custom"
-          git checkout go1.24.0
-    
-          cat > tls-patches.diff << 'EOF'
-          diff --git a/src/crypto/tls/common.go b/src/crypto/tls/common.go
-          index 1a2b3c4..5d6e7f8 100644
-          --- a/src/crypto/tls/common.go
-          +++ b/src/crypto/tls/common.go
-          @@ -XXX,XX +XXX,XX @@
-          + // Cloudflare-specific extensions
-          + const (
-          +   ExtensionPadding uint16 = 21
-          + )
-          diff --git a/src/crypto/tls/conn.go b/src/crypto/tls/conn.go
-          index 8d9e0f2..a1b2c3d 100644
-          --- a/src/crypto/tls/conn.go
-          +++ b/src/crypto/tls/conn.go
-          @@ -XXX,XX +XXX,XX @@
-          + // Cloudflare padding extension
-          + func (c *Conn) addPaddingExtension() {
-          +   // Minimal padding implementation
-          +   if c.config.Padding {
-          +     c.sendBuf = append(c.sendBuf, 0x00)
-          +   }
-          + }
-          EOF
-    
-          patch -p1 < tls-patches.diff
-
-          cd src
-          ./make.bash
-
-          grep -q "Cloudflare-specific" "${{ github.workspace }}/go-custom/src/crypto/tls/common.go" || exit 1
-
-      - name: Verify Go installation
-        run: |
-          "${{ github.workspace }}/go-custom/bin/go" version
-          [[ $("${{ github.workspace }}/go-custom/bin/go" version) =~ go1\.24 ]] || exit 1
-
-      - name: Prepare SDK Environment
-        run: |
-          cat > build-wrapper.sh << 'EOF'
-          #!/bin/bash
-          export GOROOT="${{ github.workspace }}/go-custom"
-          export PATH="$GOROOT/bin:$PATH"
-          export GOCACHE=/tmp/gocache
-          exec "$@"
-          EOF
-          chmod +x build-wrapper.sh
-
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Verify Go version
+        run: go version
 
       - name: Fetch and Patch Cloudflared Makefile
         run: |
@@ -154,8 +109,6 @@ jobs:
           sed -i '/HOST_GO_PKG_VERSION/d' cloudflared/Makefile
           sed -i '/HOST_GO_PKG_SOURCE/d' cloudflared/Makefile
           sed -i '/HOST_GO_PKG_HASH/d' cloudflared/Makefile
-          
-          echo -e "\nHOST_GO := ${{ github.workspace }}/go-custom/bin/go" >> cloudflared/Makefile
 
       - name: Create default files
         run: |
@@ -249,7 +202,6 @@ jobs:
           ARCH: ${{ matrix.arch }}-${{ matrix.ref }}
           V: s
           IGNORE_ERRORS: n m y
-          COMMAND_PREFIX: ${{ github.workspace }}/build-wrapper.sh
 
       - name: Upload Output Folder
         uses: actions/upload-artifact@v4
